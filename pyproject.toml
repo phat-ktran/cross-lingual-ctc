@@ -1,0 +1,18 @@
+[project]
+name = "cross-lingual-ctc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "logging>=0.4.9.6",
+    "numpy>=2.2.6",
+    "opencv-python>=4.12.0.88",
+    "pillow>=11.3.0",
+    "pyyaml>=6.0.2",
+    "rapidfuzz>=3.13.0",
+    "torch>=2.7.1",
+    "torchsummary>=1.5.1",
+    "torchvision>=0.22.1",
+    "tqdm>=4.67.1",
+]
