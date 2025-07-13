@@ -60,15 +60,17 @@ def evaluate(
     eval_class.reset()
 
     eval_start_time = time.time()
-    total_batches = len(val_loader)
+    len(val_loader)
 
     with torch.no_grad():
         total_frame = 0.0
         sum_images = 0
-        with tqdm(total=len(val_loader), desc="eval model:", position=0, leave=True) as pbar:
+        with tqdm(
+            total=len(val_loader), desc="eval model:", position=0, leave=True
+        ) as pbar:
             for _, batch in enumerate(val_loader):
                 images = batch[0].to(device)
-                
+
                 # use amp
                 if scaler:
                     with torch.autocast(str(device)):
@@ -76,19 +78,19 @@ def evaluate(
                     output = to_float32(output)
                 else:
                     output = model(images)
-    
+
                 batch_numpy = []
                 for item in batch:
                     if isinstance(item, torch.Tensor):
                         batch_numpy.append(item.numpy())
                     else:
                         batch_numpy.append(item)
-                
+
                 # Evaluate the results of the current batch
                 post_result = None
                 post_result = post_process_class(output, batch_numpy[1])
                 eval_class(post_result, batch_numpy)
-        
+
                 # Progress indicator for evaluation
                 pbar.update(1)
                 total_frame += len(images)
@@ -105,10 +107,10 @@ def evaluate(
                 metric_strings.append(f"{k}: {v:.4f}")
             else:
                 metric_strings.append(f"{k}: {v}")
-    
+
         logger.info(f"📊 Evaluation Results ({eval_time:.2f}s):")
         logger.info(f"   {' | '.join(metric_strings)}")
-    
+
     model.train()
     return cur_metric
 
@@ -142,10 +144,10 @@ def save_checkpoint(
             checkpoint["scaler_state_dict"] = scaler.state_dict()
 
         filepath = os.path.join(config["Global"]["save_model_dir"], filepath)
-        
+
         os.makedirs(os.path.dirname(os.path.dirname(filepath)), exist_ok=True)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        
+
         torch.save(checkpoint, filepath)
 
         # Enhanced logging with emojis and better formatting
@@ -267,7 +269,7 @@ def train(config):
         for step, batch in enumerate(train_loader):
             global_step += 1
             images = batch[0].to(device)
-            
+
             optimizer.zero_grad()
 
             if config["Global"].get("use_amp", False):
@@ -315,48 +317,12 @@ def train(config):
                     f"⏳ Step {step + 1}/{len(train_loader)} ({progress:.1f}%) | Loss: {avg_loss.item():.4f}{metric_str} | LR: {current_lr:.6f} | ETA: {eta:.0f}s"
                 )
 
-            # Evaluation at specified intervals
-            if (
-                global_step > start_eval_step
-                and (global_step - start_eval_step) % eval_batch_step == 0
-                and (not config["Global"]["distributed"] or dist.get_rank() == 0)
-            ):
-                current_metrics = evaluate(
-                    model,
-                    val_loader,
-                    device,
-                    is_main_process,
-                    post_process_class,
-                    eval_class,
-                    logger,
-                    scaler
-                )
-
-                # Check if this is the best model so far
-                if is_main_process and current_metrics is not None:
-                    current_value = current_metrics.get(main_indicator, float("-inf"))
-                    if current_value > best_metric_value:
-                        best_metric_value = current_value
-                        best_metrics = current_metrics.copy()
-                        logger.info(
-                            f"🎯 New best {main_indicator}: {best_metric_value:.4f}"
-                        )
-
-                        # Save best model checkpoint
-                        save_checkpoint(
-                            model,
-                            optimizer,
-                            scaler,
-                            epoch,
-                            best_metrics,
-                            "best_accuracy.pth",
-                            config,
-                            logger,
-                            "best",
-                        )
-
         # End of epoch processing
-        if is_main_process:
+        if (
+            is_main_process
+            and global_step > start_eval_step
+            and (global_step - start_eval_step) % eval_batch_step == 0
+        ):
             epoch_time = time.time() - epoch_start_time
             logger.info(f"✅ Epoch {epoch + 1} completed in {epoch_time:.2f}s")
 
@@ -369,7 +335,7 @@ def train(config):
                 post_process_class,
                 eval_class,
                 logger,
-                scaler
+                scaler,
             )
 
             save_checkpoint(
@@ -383,7 +349,7 @@ def train(config):
                 logger,
                 "latest",
             )
-            
+
             save_checkpoint(
                 model,
                 optimizer,

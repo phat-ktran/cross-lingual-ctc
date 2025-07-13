@@ -2,13 +2,13 @@ Global:
   model_name: SVTRNet
   debug: false
   use_gpu: true
-  epoch_num: 20
+  epoch_num: 400
   distributed: false
   log_smooth_window: 20
   print_batch_step: 10
   save_model_dir: ./output/rec_svtrnet_nom_exp_1.0/
   save_epoch_step: 1
-  eval_batch_step: [0, 4882]
+  eval_batch_step: [9580, 958]
   cal_metric_during_train: true
   pretrained_model: null
   checkpoints: null
@@ -123,9 +123,9 @@ Train:
             - length
   loader:
     shuffle: true
-    batch_size_per_card: 12
+    batch_size_per_card: 32
     drop_last: true
-    num_workers: 1
+    num_workers: 4
 
 Eval:
   dataset:
@@ -152,5 +152,5 @@ Eval:
   loader:
     shuffle: false
     drop_last: false
-    batch_size_per_card: 16
-    num_workers: 8
+    batch_size_per_card: 32
+    num_workers: 2

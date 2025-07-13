@@ -432,7 +432,7 @@ class CTCHead(nn.Module):
             result = predicts
 
         if not self.training:
-            predicts = F.softmax(predicts, dim=2)
+            predicts = torch.nn.functional.softmax(predicts, dim=2)
             result = predicts
 
         return result
