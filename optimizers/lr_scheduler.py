@@ -17,13 +17,12 @@ def build_lr_scheduler(optimizer, config, total_epochs, step_each_epoch):
     """
     scheduler_type = config["name"]
     total_steps = total_epochs * step_each_epoch
-    warmup_epochs = config.get("warmup_epoch", 0)
-    warmup_steps = warmup_epochs * step_each_epoch
     base_lr = config["learning_rate"]
-    min_lr = base_lr * config.get("min_lr", 1e-5)
-
+    
     if scheduler_type == "Cosine":
-
+        warmup_epochs = config.get("warmup_epoch", 0)
+        warmup_steps = warmup_epochs * step_each_epoch
+        min_lr = base_lr * config.get("min_lr", 1e-5)
         def linear_warmup_cosine_decay(step):
             if step < warmup_steps:
                 # Linear warmup from 0 to base_lr
@@ -39,6 +38,16 @@ def build_lr_scheduler(optimizer, config, total_epochs, step_each_epoch):
 
         scheduler = torch.optim.lr_scheduler.LambdaLR(
             optimizer, lr_lambda=linear_warmup_cosine_decay
+        )
+        return scheduler
+    elif scheduler_type == "Exponential":
+        gamma = config["gamma"]  # Exponential decay factor
+        def exponential_decay(step):
+            # Exponential decay: lr = base_lr * gamma^step
+            return gamma**step
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lr_lambda=exponential_decay
         )
         return scheduler
     else:
