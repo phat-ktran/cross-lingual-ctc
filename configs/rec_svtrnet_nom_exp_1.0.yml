@@ -6,7 +6,7 @@ Global:
   distributed: false
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./output/rec_svtrnet_base_ch_exp_a5.1.3/
+  save_model_dir: ./output/rec_svtrnet_nom_exp_1.0/
   save_epoch_step: 1
   eval_batch_step: [0, 4882]
   cal_metric_during_train: true
@@ -28,7 +28,7 @@ Optimizer:
   lr:
     name: Cosine
     learning_rate: 0.0001
-    warmup_epoch: 5
+    warmup_epoch: 3
 
 Architecture:
   model_type: rec
@@ -47,7 +47,7 @@ Architecture:
     attn_drop_rate: 0.1
     drop_path_rate: 0.15
     embed_dim: [96, 192, 256]
-    depth: [3, 6, 3]
+    depth: [6, 6, 6]
     num_heads: [2, 4, 8]
     mixer:
       [
@@ -57,6 +57,12 @@ Architecture:
         "Conv",
         "Conv",
         "Conv",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Global",
+        "Global",
+        "Global",
         "Global",
         "Global",
         "Global",
@@ -64,7 +70,7 @@ Architecture:
         "Global",
         "Global",
       ]
-    local_mixer: [[7, 11], [7, 11], [7, 11]]
+    local_mixer: [[5,5], [5,5], [5,5]]
     last_stage: True
     prenorm: True
   Neck:
@@ -75,7 +81,7 @@ Architecture:
 
 Loss:
   name: WfstCTCLoss
-  output_beam: 10.0
+  output_beam: 12.0
 
 PostProcess:
   name: CTCLabelDecode
@@ -117,7 +123,7 @@ Train:
             - length
   loader:
     shuffle: true
-    batch_size_per_card: 2
+    batch_size_per_card: 12
     drop_last: true
     num_workers: 1
 

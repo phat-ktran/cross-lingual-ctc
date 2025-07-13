@@ -159,7 +159,7 @@ class Attention(nn.Module):
                 for h in range(H):
                     for w in range(W):
                         mask[h * W + w, h : h + hk, w : w + wk] = 0
-                mask = mask[:, hk // 2 : H + hk // 2, wk // 2 : W + wk // 2].view(H * W, H * W)
+                mask = mask[:, hk // 2 : H + hk // 2, wk // 2 : W + wk // 2].reshape(H * W, H * W)
                 mask[mask == 1] = float('-inf')
                 self.register_buffer("mask", mask.unsqueeze(0).unsqueeze(0))
 
