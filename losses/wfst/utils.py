@@ -91,3 +91,55 @@ def encode_text_supervisions(
         results = [supervision_segments, indices]
 
     return results
+
+
+def encode_text_supervisions_with_length(
+    targets: torch.Tensor, lengths: torch.Tensor, return_indices: bool = False
+) -> torch.Tensor | List[torch.Tensor]:
+    """
+    Encodes text-based batch tensors into a supervision tensor format.
+
+    This function is adapted for text recognition from a speech recognition
+    equivalent. It creates a `supervision_segments` tensor of shape
+    `(batch_size, 3)`, where the columns represent sequence index,
+    start position (always 0), and the number of tokens (length).
+
+    The batch items are re-ordered by length in descending order. The returned
+    tensors are all guaranteed to be consistent with this new order.
+
+    Args:
+        targets: A tensor of shape (B, L) containing the tokenized sequences.
+        lengths: A tensor of shape (B,) specifying the length of each sequence.
+
+    Returns:
+        A tuple containing:
+        - supervision_segments (torch.Tensor): The re-ordered supervision
+          tensor of shape (B, 3).
+    """
+    batch_size = targets.size(0)
+
+    # Create the supervision tensor columns
+    # 0: sequence_idx -> [0, 1, 2, ..., B-1]
+    # 1: start_position -> Always 0 for text
+    # 2: num_tokens -> The length of each sequence
+    supervision_segments = torch.stack(
+        (
+            torch.arange(batch_size, dtype=torch.int32),
+            torch.zeros(batch_size, dtype=torch.int32),
+            lengths.to(torch.int32).to("cpu"),
+        ),
+        dim=1,
+    )
+
+    # Sort by sequence length (column 2) in descending order
+    indices = torch.argsort(supervision_segments[:, 2], descending=True)
+
+    # Re-order the supervisions, the original targets, and the lengths
+    supervision_segments = supervision_segments[indices]
+
+    results = supervision_segments
+
+    if return_indices:
+        results = [supervision_segments, indices]
+
+    return results

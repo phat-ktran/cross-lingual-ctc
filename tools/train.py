@@ -176,6 +176,64 @@ def to_float32(preds):
     return preds
 
 
+def adaptive_gradient_clipping(model, max_norm=5.0, percentile=95):
+    """More intelligent gradient clipping"""
+    total_norm = 0
+    param_count = 0
+
+    # Calculate gradient norms
+    grad_norms = []
+    for p in model.parameters():
+        if p.grad is not None:
+            param_norm = p.grad.data.norm(2)
+            grad_norms.append(param_norm.item())
+            total_norm += param_norm.item() ** 2
+            param_count += 1
+
+    total_norm = total_norm ** (1.0 / 2)
+
+    # Use percentile-based clipping for more stability
+    if grad_norms:
+        import numpy as np
+
+        clip_value = min(max_norm, np.percentile(grad_norms, percentile) * 2)
+        clip_value = max(clip_value, 0.1)  # Minimum clip value
+    else:
+        clip_value = max_norm
+
+    # Apply clipping
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_value)
+
+    return total_norm, clip_value
+
+
+def layer_wise_gradient_clipping(model, base_max_norm=5.0):
+    """Different clipping for different layers"""
+    head_params = []
+    backbone_params = []
+
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            if "head" in name:
+                head_params.append(param)
+            else:
+                backbone_params.append(param)
+
+    # Clip head (final layer) more aggressively
+    if head_params:
+        head_norm = torch.nn.utils.clip_grad_norm_(
+            head_params, max_norm=base_max_norm * 0.5
+        )
+        # print(f"Head gradient norm: {head_norm:.4f}")
+
+    # Clip backbone less aggressively
+    if backbone_params:
+        backbone_norm = torch.nn.utils.clip_grad_norm_(
+            backbone_params, max_norm=base_max_norm
+        )
+        # print(f"Backbone gradient norm: {backbone_norm:.4f}")
+
+
 def train(config):
     # Distributed training setup
     if config["Global"]["distributed"]:
@@ -284,12 +342,28 @@ def train(config):
                 scaler.update()
             else:
                 outputs = model(images)
+
                 loss = criterion(outputs, batch)
                 avg_loss = loss["loss"]
-                avg_loss.backward()
 
-                # Gradient clipping
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                # Add loss scaling for stability
+                scaled_loss = avg_loss * 0.1  # Scale down loss
+                scaled_loss.backward()
+                
+                # Check for NaN gradients
+                nan_count = 0
+                for name, param in model.named_parameters():
+                    if param.grad is not None and torch.isnan(param.grad).any():
+                        print(f"NaN gradient detected in {name}")
+                        nan_count += 1
+                
+                if nan_count > 0:
+                    print(f"WARNING: {nan_count} parameters have NaN gradients!")
+                    optimizer.zero_grad()
+                    return avg_loss.item()
+                
+                # Apply layer-wise gradient clipping
+                layer_wise_gradient_clipping(model, base_max_norm=5.0)
 
                 optimizer.step()
                 scheduler.step()

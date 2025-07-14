@@ -3,7 +3,7 @@ import k2
 import torch
 
 
-from .utils import retain_and_map_tokens_in_batch, encode_text_supervisions
+from .utils import encode_text_supervisions_with_length, retain_and_map_tokens_in_batch, encode_text_supervisions
 
 
 class CTCGraphCompiler:

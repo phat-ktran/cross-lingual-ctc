@@ -24,9 +24,9 @@ Optimizer:
   epsilon: 1.e-8
   weight_decay: 0.05
   lr:
-    name: Exponential
-    learning_rate: 0.005
-    gamma: 0.99997
+    name: Cosine
+    learning_rate: 0.001
+    warmup_epoch: 5
 
 Architecture:
   model_type: rec
@@ -79,10 +79,10 @@ Architecture:
 
 Loss:
   name: STCLoss
-  output_beam: 10.0
-  p0: 0.5
+  output_beam: 12.0
+  p0: 0.3
   plast: 0.9
-  thalf: 10000
+  thalf: 5000
 
 PostProcess:
   name: CTCLabelDecode

@@ -24,9 +24,9 @@ Optimizer:
   epsilon: 1.e-8
   weight_decay: 0.05
   lr:
-    name: Exponential
-    learning_rate: 0.005
-    gamma: 0.99997
+    name: Cosine
+    learning_rate: 0.001
+    warmup_epoch: 5
 
 Architecture:
   model_type: rec
@@ -121,7 +121,7 @@ Train:
             - length
   loader:
     shuffle: true
-    batch_size_per_card: 32
+    batch_size_per_card: 2
     drop_last: true
     num_workers: 4
 
