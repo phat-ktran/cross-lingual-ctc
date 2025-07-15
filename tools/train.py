@@ -392,7 +392,7 @@ def train(config):
                 logger.info(
                     f"⏳ Step {step + 1}/{len(train_loader)} ({progress:.1f}%) | Loss: {loss.item():.4f}{metric_str} | LR: {current_lr:.6f} | ETA: {eta:.0f}s"
                 )
-
+        current_metrics = None
         # End of epoch processing
         if (
             is_main_process
@@ -412,30 +412,6 @@ def train(config):
                 eval_class,
                 logger,
                 scaler,
-            )
-
-            save_checkpoint(
-                model,
-                optimizer,
-                scaler,
-                epoch,
-                current_metrics,
-                "latest.pth",
-                config,
-                logger,
-                "latest",
-            )
-
-            save_checkpoint(
-                model,
-                optimizer,
-                scaler,
-                epoch,
-                current_metrics,
-                f"iter_epoch_{str(epoch + 1)}.pth",
-                config,
-                logger,
-                "latest",
             )
 
             # Update best model if needed
@@ -460,6 +436,30 @@ def train(config):
                         logger,
                         "best",
                     )
+        
+        save_checkpoint(
+            model,
+            optimizer,
+            scaler,
+            epoch,
+            current_metrics,
+            "latest.pth",
+            config,
+            logger,
+            "latest",
+        )
+
+        save_checkpoint(
+            model,
+            optimizer,
+            scaler,
+            epoch,
+            current_metrics,
+            f"iter_epoch_{str(epoch + 1)}.pth",
+            config,
+            logger,
+            "latest",
+        )
 
     # Training completion summary
     if is_main_process:
