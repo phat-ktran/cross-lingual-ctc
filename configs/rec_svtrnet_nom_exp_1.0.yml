@@ -80,7 +80,7 @@ Architecture:
 Loss:
   name: WfstCTCLoss
   output_beam: 12.0
-  reduction: none
+  reduction: mean
 
 PostProcess:
   name: CTCLabelDecode
