@@ -25,8 +25,8 @@ Optimizer:
   weight_decay: 0.05
   lr:
     name: Cosine
-    learning_rate: 0.001
-    warmup_epoch: 10
+    learning_rate: 0.0001
+    warmup_epoch: 5
 
 Architecture:
   model_type: rec

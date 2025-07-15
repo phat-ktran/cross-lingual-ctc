@@ -3,10 +3,10 @@ import k2
 import torch
 
 
-from .utils import encode_text_supervisions_with_length, retain_and_map_tokens_in_batch, encode_text_supervisions
+from .utils import retain_and_map_tokens_in_batch, encode_text_supervisions
 
 
-class CTCGraphCompiler:    
+class CTCGraphCompiler:
     def compile(self, batch: List[torch.Tensor], device: torch.device | str) -> k2.Fsa:
         assert len(batch) >= 2
         targets, lengths = batch[:2]
@@ -69,25 +69,33 @@ class WfstCTCLoss(torch.nn.Module):
                 log_probs, supervision_segments, allow_truncate=0
             )
 
-            # Pass target_lengths when reduction is 'mean'
-            target_lengths = lengths.to(log_probs.device) if self.reduction == "mean" else None
-
             loss = k2.ctc_loss(
                 decoding_graph=decoding_graphs,
                 dense_fsa_vec=dense_fsa_vec,
                 output_beam=self.output_beam,
-                reduction=self.reduction,
+                reduction="none",
                 use_double_scores=self.use_double_scores,
-                target_lengths=target_lengths,
+                target_lengths=None,
             )
-            
-            if self.reduction == "none":
+
+            if self.reduction == "none" or self.reduction == "sum":
                 loss = torch.sum(
                     torch.where(
                         loss != float("inf"),
                         loss,
                         torch.tensor(0, dtype=torch.float32).to(log_probs.device),
                     )
+                )
+            else:
+                loss = (
+                    torch.sum(
+                        torch.where(
+                            loss != float("inf"),
+                            loss,
+                            torch.tensor(0, dtype=torch.float32).to(log_probs.device),
+                        )
+                    )
+                    / B
                 )
 
         assert loss.requires_grad == logits.requires_grad
