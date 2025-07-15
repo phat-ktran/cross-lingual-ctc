@@ -2,6 +2,7 @@ import os
 import torch
 from torch.amp.grad_scaler import GradScaler
 import torch.distributed as dist
+from torch.nn.utils import clip_grad_norm_
 import yaml
 import logging
 import time
@@ -344,11 +345,11 @@ def train(config):
                 outputs = model(images)
 
                 loss = criterion(outputs, batch)
-                avg_loss = loss["loss"]
+                loss = loss["loss"]
 
                 # Add loss scaling for stability
-                scaled_loss = avg_loss * 0.1  # Scale down loss
-                scaled_loss.backward()
+                loss.backward()
+                clip_grad_norm_(model.parameters(), 5.0, 2.0)
                 
                 # Check for NaN gradients
                 nan_count = 0
@@ -360,11 +361,8 @@ def train(config):
                 if nan_count > 0:
                     print(f"WARNING: {nan_count} parameters have NaN gradients!")
                     optimizer.zero_grad()
-                    return avg_loss.item()
-                
-                # Apply layer-wise gradient clipping
-                layer_wise_gradient_clipping(model, base_max_norm=5.0)
-
+                    return loss.item()
+                    
                 optimizer.step()
                 scheduler.step()
 
@@ -392,7 +390,7 @@ def train(config):
 
                 current_lr = scheduler.get_last_lr()[0]
                 logger.info(
-                    f"⏳ Step {step + 1}/{len(train_loader)} ({progress:.1f}%) | Loss: {avg_loss.item():.4f}{metric_str} | LR: {current_lr:.6f} | ETA: {eta:.0f}s"
+                    f"⏳ Step {step + 1}/{len(train_loader)} ({progress:.1f}%) | Loss: {loss.item():.4f}{metric_str} | LR: {current_lr:.6f} | ETA: {eta:.0f}s"
                 )
 
         # End of epoch processing

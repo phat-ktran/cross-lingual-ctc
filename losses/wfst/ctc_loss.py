@@ -6,7 +6,7 @@ import torch
 from .utils import encode_text_supervisions_with_length, retain_and_map_tokens_in_batch, encode_text_supervisions
 
 
-class CTCGraphCompiler:
+class CTCGraphCompiler:    
     def compile(self, batch: List[torch.Tensor], device: torch.device | str) -> k2.Fsa:
         assert len(batch) >= 2
         targets, lengths = batch[:2]
@@ -80,6 +80,15 @@ class WfstCTCLoss(torch.nn.Module):
                 use_double_scores=self.use_double_scores,
                 target_lengths=target_lengths,
             )
+            
+            if self.reduction == "none":
+                loss = torch.sum(
+                    torch.where(
+                        loss != float("inf"),
+                        loss,
+                        torch.tensor(0, dtype=torch.float32).to(log_probs.device),
+                    )
+                )
 
         assert loss.requires_grad == logits.requires_grad
 
