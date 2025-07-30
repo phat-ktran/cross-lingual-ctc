@@ -3,12 +3,14 @@ import copy
 # rec loss
 from .rec_ctc_loss import CTCLoss
 from .wfst import WfstCTCLoss, STCLoss
+from .softctc.soft_ctc_loss import SoftCTCLoss
 
 def build_loss(config):
     support_dict = [
         "CTCLoss",
         "WfstCTCLoss",
-        "STCLoss"
+        "STCLoss",
+        "SoftCTCLoss"
     ]
     config = copy.deepcopy(config)
     module_name = config.pop("name")

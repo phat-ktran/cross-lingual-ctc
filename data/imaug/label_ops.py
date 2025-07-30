@@ -1,5 +1,8 @@
 import copy
+import json
 import numpy as np
+
+from losses.softctc.models.connections import Connections
 
 
 class BaseRecLabelEncode(object):
@@ -95,6 +98,87 @@ class CTCLabelEncode(BaseRecLabelEncode):
         dict_character = ["blank"] + dict_character
         return dict_character
 
+
+class SoftCTCLabelEncode(BaseRecLabelEncode):
+    def __init__(
+        self, max_text_length, character_dict_path=None, use_space_char=False, **kwargs
+    ):
+        super().__init__(max_text_length, character_dict_path, use_space_char)
+
+    def encode(self, text):
+        # Input validation
+        if not text or len(text) == 0:
+            return None
+        
+        # Parse JSON
+        try:
+            confusion_network = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        
+        # Validate structure
+        if not isinstance(confusion_network, list):
+            return None
+        
+        # Check length limit
+        if len(confusion_network) > self.max_text_len:
+            return None
+        
+        # Apply lowercase if needed
+        if self.lower:
+            for i in range(len(confusion_network)):
+                if isinstance(confusion_network[i], dict):
+                    confusion_network[i] = {
+                        (k.lower() if isinstance(k, str) else k): v 
+                        for k, v in confusion_network[i].items()
+                    }
+        
+        # Convert characters to dictionary indices
+        for i in range(len(confusion_network)):
+            if not isinstance(confusion_network[i], dict):
+                continue
+                
+            new_confusion_set = {}
+            has_valid_chars = False
+            
+            for char, prob in confusion_network[i].items():
+                if char in self.dict:
+                    new_confusion_set[self.dict[char]] = prob
+                    has_valid_chars = True
+                # If char not in dict, we skip it (unknown character)
+            
+            # If no valid characters found, add None token
+            if not has_valid_chars:
+                new_confusion_set[None] = 1.0
+            
+            confusion_network[i] = new_confusion_set
+        
+        # Check if all positions are None (completely unknown text)
+        if all(len(obj) == 1 and None in obj for obj in confusion_network):
+            return None
+        
+        return confusion_network
+
+    def __call__(self, data):
+        text = data["label"]
+        confusion_network = self.encode(text)
+        if confusion_network is None:
+            return None
+        text = []
+        for confusion_set in confusion_network:
+            for char, _ in confusion_set.items():
+                if char is None:
+                    continue
+                text.append(char)
+        connections = Connections.from_confusion_network(confusion_network, 0)
+        data["label"] = np.array(text)
+        data["connections"] = connections
+        data["length"] = np.array(len(confusion_network))
+        return data
+
+    def add_special_char(self, dict_character):
+        dict_character = ["blank"] + dict_character
+        return dict_character
 
 class MultiLabelEncode(BaseRecLabelEncode):
     def __init__(

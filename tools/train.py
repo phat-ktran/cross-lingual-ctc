@@ -368,25 +368,28 @@ def train(config):
 
             # Enhanced training logging
             if is_main_process and (step + 1) % print_batch_step == 0:
-                batch = [
-                    item.numpy() if isinstance(item, torch.Tensor) else item
-                    for item in batch
-                ]
-                post_result = post_process_class(outputs, batch[1])
-                metrics = eval_class(post_result, batch)
+                # Format training metrics
+                metric_str = ""
+                if config["Global"]["cal_metric_during_train"]:
+                    batch = [
+                        item.numpy() if isinstance(item, torch.Tensor) else item
+                        for item in batch
+                    ]
+                    post_result = post_process_class(outputs, batch[1])
+                    metrics = eval_class(post_result, batch)
+                
+                    for k, v in metrics.items():
+                        if isinstance(v, float):
+                            metric_str += f" | {k}: {v:.4f}"
+                        else:
+                            metric_str += f" | {k}: {v}"
 
                 # Calculate progress and ETA
                 progress = (step + 1) / len(train_loader) * 100
                 elapsed = time.time() - epoch_start_time
                 eta = elapsed / (step + 1) * (len(train_loader) - step - 1)
 
-                # Format training metrics
-                metric_str = ""
-                for k, v in metrics.items():
-                    if isinstance(v, float):
-                        metric_str += f" | {k}: {v:.4f}"
-                    else:
-                        metric_str += f" | {k}: {v}"
+                
 
                 current_lr = scheduler.get_last_lr()[0]
                 logger.info(

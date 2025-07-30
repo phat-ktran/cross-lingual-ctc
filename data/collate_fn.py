@@ -58,6 +58,21 @@ class ListCollator(object):
         return list(data_dict.values())
 
 
+class SoftCTCListCollator(object):
+    """
+    data batch
+    """
+
+    def __call__(self, batch):
+        data_dict = defaultdict(list)
+        to_tensor_idxs = [0, 2]
+        for sample in batch:
+            for idx, v in enumerate(sample):
+                data_dict[idx].append(v)
+        for idx in to_tensor_idxs:
+            data_dict[idx] = torch.tensor(np.array(data_dict[idx]))
+        return list(data_dict.values())
+
 class FilterListCollator(object):
     """
     data batch
